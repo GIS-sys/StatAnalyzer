@@ -11,7 +11,8 @@ from tqdm import tqdm
 
 # SETTINGS
 FROM_FILE = False
-XI_INTERESTING_THRESHOLD = 0.99
+XI_INDEPENDENT_THRESHOLD = 0.1
+XI_CORRELATED_THRESHOLD = 0.999
 
 
 # all global variables
@@ -33,7 +34,7 @@ if os.path.exists("config.py"):
                     break
                 IGNORE_COLUMNS.append(line)
 else:
-    CSV_FILE = input("Path to .csv file to analzye, for example: data/psy_mark.csv\n")
+    CSV_FILE = input("Path to .csv file to analzye, for example: data/_example.csv\n")
     df = pd.read_csv(CSV_FILE)
     print("Columns:", df.columns)
     print("Write down all columns you want to ignore, each on new line. Write empty line to exit")
@@ -86,20 +87,20 @@ def xiCheck(colA, colB):
     p = scipy.stats.chi2.cdf(xi, freedom)
     return p
 
-def analyze(colA, colB):
+def analyze(colA, colB, title_prefix):
     TOTAL_TOKEN = "total"
     optionsA = list(set(df[colA]))
     optionsB = list(set(df[colB]))
     abDf = pd.DataFrame([], columns=optionsA+[TOTAL_TOKEN], index=optionsB+[TOTAL_TOKEN])
     for A in optionsA:
         for B in optionsB:
-            abDf[A][B] = df[(df[colA] == A) & (df[colB] == B)].shape[0]
+            abDf[A][B] = df[(df[colA] == A) & (df[colB] == B)].shape[0] / df[(df[colB] == B)].shape[0]
     for A in optionsA:
-        abDf[A][TOTAL_TOKEN] =df[(df[colA] == A)].shape[0]
+        abDf[A][TOTAL_TOKEN] = df[(df[colA] == A)].shape[0]
     for B in optionsB:
-        abDf[TOTAL_TOKEN][B] =df[(df[colB] == B)].shape[0]
+        abDf[TOTAL_TOKEN][B] = df[(df[colB] == B)].shape[0]
     abDf[TOTAL_TOKEN][TOTAL_TOKEN] = len(df)
-    drawPandasDataframe(abDf, title=f"{colA}_{colB}")
+    drawPandasDataframe(abDf, title=f"{title_prefix}{colA}_{colB}")
 
 data = []
 for colA in tqdm(df_columns):
@@ -112,6 +113,8 @@ drawPandasDataframe(xiDf, title="xicheck")
 
 for i, colA in enumerate(df_columns):
     for colB in df_columns[i+1:]:
-        if xiDf[colA][colB] > XI_INTERESTING_THRESHOLD:
-            analyze(colA, colB)
+        if xiDf[colA][colB] < XI_INDEPENDENT_THRESHOLD:
+            analyze(colA, colB, title_prefix="independent_")
+        if xiDf[colA][colB] > XI_CORRELATED_THRESHOLD:
+            analyze(colA, colB, title_prefix="correlated_")
 

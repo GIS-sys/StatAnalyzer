@@ -1,5 +1,7 @@
 import dataframe_image as dfi
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import pandas as pd
 from pandas.plotting import table
@@ -9,7 +11,6 @@ from tqdm import tqdm
 
 # SETTINGS
 FROM_FILE = False
-XI_CHECK_THRESHOLD = 0.95
 
 
 # all global variables
@@ -40,12 +41,15 @@ else:
 df_columns = [col for col in df.columns if not (col in IGNORE_COLUMNS)]
 
 
+def colorFader(c1, c2, mix=0):
+    c1=np.array(mpl.colors.to_rgb(c1))
+    c2=np.array(mpl.colors.to_rgb(c2))
+    return mpl.colors.to_hex((1-mix)*c1 + mix*c2)
+
 def color_xi(val):
-    if val < XI_CHECK_THRESHOLD:
-        color = 'green'
-    else:
-        color = 'red'
-    return 'background-color: %s' % color
+    COLOR_START = "white"
+    COLOR_END = "green"
+    return f"background-color: {colorFader(COLOR_START, COLOR_END, val)}"
 
 def drawPandasDataframe(dataframe):
     filename = "data/xicheck"

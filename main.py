@@ -1,11 +1,18 @@
+import dataframe_image as dfi
+import matplotlib.pyplot as plt
 import os
 import pandas as pd
+from pandas.plotting import table
 import scipy
 from tqdm import tqdm
 
 
-# all global variables
+# SETTINGS
 FROM_FILE = False
+XI_CHECK_THRESHOLD = 0.95
+
+
+# all global variables
 IGNORE_COLUMNS = []
 df = None
 df_columns = None
@@ -33,18 +40,23 @@ else:
 df_columns = [col for col in df.columns if not (col in IGNORE_COLUMNS)]
 
 
+def color_xi(val):
+    if val < XI_CHECK_THRESHOLD:
+        color = 'green'
+    else:
+        color = 'red'
+    return 'color: %s' % color
 
-#def analyze(colA, colB):
-#    optionsA = list(set(df[colA]))
-#    optionsB = list(set(df[colB]))
-#    for A in optionsA:
-#        aggr = []
-#        for B in optionsB:
-#            count = df[(df[colA] == A) & (df[colB] == B)].shape[0]
-#            aggr.append(count)
-#        print(A)
-#        for B, count in zip(optionsB, aggr):
-#            print(B, "\t\t", count, "\t\t", count / sum(aggr))
+def drawPandasDataframe(dataframe):
+    filename = "data/xicheck.png"
+    dataframe.style.applymap(color_xi)
+    #ax = plt.subplot(111, frame_on=False)
+    #ax.xaxis.set_visible(False)
+    #ax.yaxis.set_visible(False)
+    #table(ax, dataframe, loc="center")
+    #plt.savefig(filename)
+    dfi.export(dataframe, filename)
+    print(f"Saved analyzis to {filename}")
 
 def xiCheck(colA, colB):
     EMPTY_TOKEN = ""
@@ -67,8 +79,8 @@ def xiCheck(colA, colB):
             xi += (data[A][B] - expected)**2 / expected
     freedom = (len(optionsA) - 1) * (len(optionsB) - 1)
     p = scipy.stats.chi2.cdf(xi, freedom)
-    # print(p, xi, freedom)
     return p
+
 
 data = []
 for colA in tqdm(df_columns):
@@ -76,6 +88,6 @@ for colA in tqdm(df_columns):
     for colB in df_columns:
         row.append(xiCheck(colA, colB))
     data.append(row)
-print(data)
-df = pd.DataFrame(data, columns=df_columns, index=df_columns)
-print(df)
+xiDf = pd.DataFrame(data, columns=df_columns, index=df_columns)
+drawPandasDataframe(xiDf)
+

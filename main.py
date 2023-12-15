@@ -34,7 +34,7 @@ if os.path.exists("config.py"):
                     break
                 IGNORE_COLUMNS.append(line)
 else:
-    CSV_FILE = input("Path to .csv file to analzye, for example: data/_example.csv\n")
+    CSV_FILE = input("Path to .csv file to analzye, for example: data/a_example.csv\n")
     df = pd.read_csv(CSV_FILE)
     print("Columns:", df.columns)
     print("Write down all columns you want to ignore, each on new line. Write empty line to exit")

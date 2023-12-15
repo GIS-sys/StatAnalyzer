@@ -4,5 +4,5 @@
 
 2) Run main.py
 
-3) all correlated and uncorrelated pairs will be placed in data/ folder
+3) All correlated and uncorrelated pairs will be placed in data/ folder
 

@@ -59,9 +59,8 @@ def drawPandasDataframe(dataframe, style=False, title="dataframe"):
     else:
         styled = dataframe
     dfi.export(styled, f"{filename}.png")
-    html = styled.to_html()
-    with open(filename, "w") as fout:
-        fout.write(f"{filename}.html")
+    with open(f"{filename}.html", "w") as fout:
+        fout.write(styled.to_html())
     print(f"Saved analyzis to {filename}.png and {filename}.html")
 
 def xiCheck(colA, colB):
@@ -91,19 +90,14 @@ def analyze(colA, colB):
     TOTAL_TOKEN = "total"
     optionsA = list(set(df[colA]))
     optionsB = list(set(df[colB]))
-    data = []
+    abDf = pd.DataFrame([], columns=optionsA+[TOTAL_TOKEN], index=optionsB+[TOTAL_TOKEN])
     for A in optionsA:
-        aggr = []
         for B in optionsB:
-            count = df[(df[colA] == A) & (df[colB] == B)].shape[0]
-            aggr.append(count)
-        row = []
-        for B, count in zip(optionsB, aggr):
-            row.append(count / sum(aggr))
-        row.append(sum(aggr))
-        data.append(row)
-    data.append([df[df[colB] == B].shape[0] for B in optionsB])
-    abDf = pd.DataFrame(data, columns=optionsB + [TOTAL_TOKEN], index=optionsA + [TOTAL_TOKEN])
+            abDf[A][B] = df[(df[colA] == A) & (df[colB] == B)].shape[0]
+    for A in optionsA:
+        abDf[A][TOTAL_TOKEN] =df[(df[colA] == A)].shape[0]
+    for B in optionsB:
+        abDf[TOTAL_TOKEN][B] =df[(df[colB] == B)].shape[0]
     abDf[TOTAL_TOKEN][TOTAL_TOKEN] = len(df)
     drawPandasDataframe(abDf, title=f"{colA}_{colB}")
 

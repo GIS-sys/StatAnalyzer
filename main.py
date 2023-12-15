@@ -45,18 +45,16 @@ def color_xi(val):
         color = 'green'
     else:
         color = 'red'
-    return 'color: %s' % color
+    return 'background-color: %s' % color
 
 def drawPandasDataframe(dataframe):
-    filename = "data/xicheck.png"
-    dataframe.style.applymap(color_xi)
-    #ax = plt.subplot(111, frame_on=False)
-    #ax.xaxis.set_visible(False)
-    #ax.yaxis.set_visible(False)
-    #table(ax, dataframe, loc="center")
-    #plt.savefig(filename)
-    dfi.export(dataframe, filename)
-    print(f"Saved analyzis to {filename}")
+    filename = "data/xicheck"
+    styled = dataframe.style.applymap(color_xi)
+    dfi.export(styled, f"{filename}.png")
+    html = styled.to_html()
+    with open(filename, "w") as fout:
+        fout.write(f"{filename}.html")
+    print(f"Saved analyzis to {filename}.png and {filename}html")
 
 def xiCheck(colA, colB):
     EMPTY_TOKEN = ""

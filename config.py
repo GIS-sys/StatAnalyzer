@@ -1,4 +1,4 @@
-data/psy_mark.csv
+data/a_example.csv
 Отметка времени
 Ваш средний балл. Например 7.38
 

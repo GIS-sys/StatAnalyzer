@@ -1,22 +1,52 @@
+import os
 import pandas as pd
 import scipy
+from tqdm import tqdm
 
-# Load the CSV file
-df = pd.read_csv("psy_mark.csv")
 
-def analyze(colA, colB):
-    optionsA = list(set(df[colA]))
-    optionsB = list(set(df[colB]))
-    for A in optionsA:
-        aggr = []
-        for B in optionsB:
-            count = df[(df[colA] == A) & (df[colB] == B)].shape[0]
-            aggr.append(count)
-        print(A)
-        for B, count in zip(optionsB, aggr):
-            print(B, "\t\t", count, "\t\t", count / sum(aggr))
+# all global variables
+FROM_FILE = False
+IGNORE_COLUMNS = []
+df = None
+df_columns = None
 
-def correlate(colA, colB):
+# read them
+if os.path.exists("config.py"):
+    print("Config detected, reading from it")
+    with open("config.py", "r") as fin:
+        for i, line in enumerate(fin):
+            line = line.strip()
+            if i == 0:
+                CSV_FILE = line
+                df = pd.read_csv(CSV_FILE)
+            else:
+                if line == "":
+                    break
+                IGNORE_COLUMNS.append(line)
+else:
+    CSV_FILE = input("Path to .csv file to analzye, for example: data/psy_mark.csv\n")
+    df = pd.read_csv(CSV_FILE)
+    print("Columns:", df.columns)
+    print("Write down all columns you want to ignore, each on new line. Write empty line to exit")
+    while (col := input()):
+        IGNORE_COLUMNS.append(col)
+df_columns = [col for col in df.columns if not (col in IGNORE_COLUMNS)]
+
+
+
+#def analyze(colA, colB):
+#    optionsA = list(set(df[colA]))
+#    optionsB = list(set(df[colB]))
+#    for A in optionsA:
+#        aggr = []
+#        for B in optionsB:
+#            count = df[(df[colA] == A) & (df[colB] == B)].shape[0]
+#            aggr.append(count)
+#        print(A)
+#        for B, count in zip(optionsB, aggr):
+#            print(B, "\t\t", count, "\t\t", count / sum(aggr))
+
+def xiCheck(colA, colB):
     EMPTY_TOKEN = ""
     length = df.shape[0]
     optionsA = list(set(df[colA]))
@@ -37,20 +67,15 @@ def correlate(colA, colB):
             xi += (data[A][B] - expected)**2 / expected
     freedom = (len(optionsA) - 1) * (len(optionsB) - 1)
     p = scipy.stats.chi2.cdf(xi, freedom)
-    print(p, xi, freedom)
+    # print(p, xi, freedom)
+    return p
 
-analyze("Ваш пол?", "Играете в компьютерные игры?")
-correlate("Ваш пол?", "Играете в компьютерные игры?")
-
-#correlate("Ваш пол?", "Ваш пол?")
-#correlate("Играете в компьютерные игры?", "Играете в компьютерные игры?")
-
-analyze("Была ли у вас золотая медаль в школе?", "Вы пьёте алкоголь?")
-correlate("Была ли у вас золотая медаль в школе?", "Вы пьёте алкоголь?")
-
-analyze("Ваш курс.", "Ваш пол?")
-correlate("Ваш курс.", "Ваш пол?")
-
-analyze("Занимаетесь спортом?", "Часто гуляете на свежем воздухе?")
-correlate("Занимаетесь спортом?", "Часто гуляете на свежем воздухе?")
-
+data = []
+for colA in tqdm(df_columns):
+    row = []
+    for colB in df_columns:
+        row.append(xiCheck(colA, colB))
+    data.append(row)
+print(data)
+df = pd.DataFrame(data, columns=df_columns, index=df_columns)
+print(df)

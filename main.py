@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 # SETTINGS
 FROM_FILE = False
+XI_INTERESTING_THRESHOLD = 0.99
 
 
 # all global variables
@@ -51,17 +52,20 @@ def color_xi(val):
     COLOR_END = "green"
     return f"background-color: {colorFader(COLOR_START, COLOR_END, val)}"
 
-def drawPandasDataframe(dataframe):
-    filename = "data/xicheck"
-    styled = dataframe.style.applymap(color_xi)
+def drawPandasDataframe(dataframe, style=False, title="dataframe"):
+    filename = "data/" + title
+    if style:
+        styled = dataframe.style.applymap(color_xi)
+    else:
+        styled = dataframe
     dfi.export(styled, f"{filename}.png")
     html = styled.to_html()
     with open(filename, "w") as fout:
         fout.write(f"{filename}.html")
-    print(f"Saved analyzis to {filename}.png and {filename}html")
+    print(f"Saved analyzis to {filename}.png and {filename}.html")
 
 def xiCheck(colA, colB):
-    EMPTY_TOKEN = ""
+    TOTAL_TOKEN = ""
     length = df.shape[0]
     optionsA = list(set(df[colA]))
     optionsB = list(set(df[colB]))
@@ -70,19 +74,38 @@ def xiCheck(colA, colB):
         data[A] = {}
         for B in optionsB:
             data[A][B] = df[(df[colA] == A) & (df[colB] == B)].shape[0]
-        data[A][EMPTY_TOKEN] = sum([data[A][k] for k in data[A]])
-    data[EMPTY_TOKEN] = {}
-    for B in optionsB + [EMPTY_TOKEN]:
-        data[EMPTY_TOKEN][B] = sum([data[k][B] for k in data if k != EMPTY_TOKEN])
+        data[A][TOTAL_TOKEN] = sum([data[A][k] for k in data[A]])
+    data[TOTAL_TOKEN] = {}
+    for B in optionsB + [TOTAL_TOKEN]:
+        data[TOTAL_TOKEN][B] = sum([data[k][B] for k in data if k != TOTAL_TOKEN])
     xi = 0
     for A in optionsA:
         for B in optionsB:
-            expected = data[A][EMPTY_TOKEN] * data[EMPTY_TOKEN][B] / data[EMPTY_TOKEN][EMPTY_TOKEN]
+            expected = data[A][TOTAL_TOKEN] * data[TOTAL_TOKEN][B] / data[TOTAL_TOKEN][TOTAL_TOKEN]
             xi += (data[A][B] - expected)**2 / expected
     freedom = (len(optionsA) - 1) * (len(optionsB) - 1)
     p = scipy.stats.chi2.cdf(xi, freedom)
     return p
 
+def analyze(colA, colB):
+    TOTAL_TOKEN = "total"
+    optionsA = list(set(df[colA]))
+    optionsB = list(set(df[colB]))
+    data = []
+    for A in optionsA:
+        aggr = []
+        for B in optionsB:
+            count = df[(df[colA] == A) & (df[colB] == B)].shape[0]
+            aggr.append(count)
+        row = []
+        for B, count in zip(optionsB, aggr):
+            row.append(count / sum(aggr))
+        row.append(sum(aggr))
+        data.append(row)
+    data.append([df[df[colB] == B].shape[0] for B in optionsB])
+    abDf = pd.DataFrame(data, columns=optionsB + [TOTAL_TOKEN], index=optionsA + [TOTAL_TOKEN])
+    abDf[TOTAL_TOKEN][TOTAL_TOKEN] = len(df)
+    drawPandasDataframe(abDf, title=f"{colA}_{colB}")
 
 data = []
 for colA in tqdm(df_columns):
@@ -91,5 +114,10 @@ for colA in tqdm(df_columns):
         row.append(xiCheck(colA, colB))
     data.append(row)
 xiDf = pd.DataFrame(data, columns=df_columns, index=df_columns)
-drawPandasDataframe(xiDf)
+drawPandasDataframe(xiDf, title="xicheck")
+
+for i, colA in enumerate(df_columns):
+    for colB in df_columns[i+1:]:
+        if xiDf[colA][colB] > XI_INTERESTING_THRESHOLD:
+            analyze(colA, colB)
 
